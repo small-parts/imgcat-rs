@@ -10,7 +10,7 @@ use structopt::StructOpt;
 
 fn main() {
     let config: Config = Config::from_args();
-    concatenate_and_print_image(config).expect("display image failed");
+    concatenate_and_print_image(config).expect("failed display image");
 }
 
 #[derive(Debug, StructOpt)]
@@ -43,7 +43,6 @@ fn concatenate_and_print_image(config: Config) -> io::Result<()> {
 
     let data = read_file(path)?;
 
-    let mut image_writer = BufWriter::new(stdout());
     let is_tmux = env!("TERM").starts_with("screen");
     let mut buffer = Vec::<u8>::new();
 
@@ -57,10 +56,10 @@ fn concatenate_and_print_image(config: Config) -> io::Result<()> {
     buffer.extend_from_slice(b"1337;File=");
 
     buffer.extend_from_slice(format!(";size={}", data.len()).as_bytes());
-    buffer.extend_from_slice(format!(";inline={}", u8::from(!inline)).as_bytes());
+    buffer.extend_from_slice(format!(";inline={}", !inline as u8).as_bytes());
     buffer.extend_from_slice(format!(";width={}", width).as_bytes());
     buffer.extend_from_slice(format!(";height={}", height).as_bytes());
-    buffer.extend_from_slice(format!(";preserveAspectRatio={}", u8::from(preserve_aspect_ratio)).as_bytes());
+    buffer.extend_from_slice(format!(";preserveAspectRatio={}", preserve_aspect_ratio as u8).as_bytes());
     buffer.push(b':');
 
     buffer.extend_from_slice(base64::encode(&data).as_bytes());
@@ -72,6 +71,7 @@ fn concatenate_and_print_image(config: Config) -> io::Result<()> {
     }
     buffer.push(b'\n');
 
+    let mut image_writer = BufWriter::new(stdout());
     image_writer.write_all(&buffer)?;
     image_writer.flush()
 }
