@@ -1,9 +1,23 @@
 [package]
 name = "imgcat"
 version = "0.1.0"
+description = "concatenate and print images in iterm2"
+keywords = ["image", "terminal"]
+readme = "README.md"
 authors = ["ltoddy <tao.liu1@thoughtworks.com>"]
 edition = "2018"
 license = "MIT"
+homepage = "https://github.com/ltoddy/imgcat-rs"
+repository = "https://github.com/ltoddy/phony"
+categories = ["development-tools"]
+include = [
+    "src/**/*.rs",
+    "Cargo.toml",
+    "LICENSE",
+    "README.md",
+    "me.jpg",
+    "rustfmt.toml"
+]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
