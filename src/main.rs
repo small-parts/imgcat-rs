@@ -4,7 +4,8 @@ use std::io;
 use std::io::prelude::*;
 use std::io::BufWriter;
 use std::io::{stdout, BufReader};
-use std::path::PathBuf;
+use std::os::unix::ffi::OsStrExt;
+use std::path::{Path, PathBuf};
 
 use structopt::StructOpt;
 
@@ -41,7 +42,7 @@ fn concatenate_and_print_image(config: Config) -> io::Result<()> {
         inline,
     } = config;
 
-    let data = read_file(path)?;
+    let data = read_file(&path)?;
 
     let is_tmux = env!("TERM").starts_with("screen");
     let mut buffer = Vec::<u8>::new();
@@ -54,7 +55,9 @@ fn concatenate_and_print_image(config: Config) -> io::Result<()> {
     buffer.push(b']');
 
     buffer.extend_from_slice(b"1337;File=");
-
+    if let Some(filename) = path.file_name() {
+        buffer.extend_from_slice(filename.as_bytes());
+    }
     buffer.extend_from_slice(format!(";size={}", data.len()).as_bytes());
     buffer.extend_from_slice(format!(";inline={}", !inline as u8).as_bytes());
     buffer.extend_from_slice(format!(";width={}", width).as_bytes());
@@ -76,7 +79,7 @@ fn concatenate_and_print_image(config: Config) -> io::Result<()> {
     image_writer.flush()
 }
 
-fn read_file(path: PathBuf) -> io::Result<Vec<u8>> {
+fn read_file<P: AsRef<Path>>(path: P) -> io::Result<Vec<u8>> {
     let file = File::open(path)?;
 
     let mut reader = BufReader::new(file);
