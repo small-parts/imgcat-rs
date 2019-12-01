@@ -4,28 +4,45 @@ use std::io;
 use std::io::prelude::*;
 use std::io::BufWriter;
 use std::io::{stdout, BufReader};
-use std::process;
+use std::path::PathBuf;
+
+use structopt::StructOpt;
 
 fn main() {
-    let args = env::args().collect::<Vec<String>>();
-
-    if args.len() != 2 {
-        eprintln!("Usage: imgcat <filename>");
-        process::exit(1);
-    }
-
-    let filename = args.get(1).unwrap();
-    let current_dir = env::current_dir().unwrap();
-    let image = File::open(current_dir.join(filename)).unwrap();
-    let mut image_reader = BufReader::new(image);
-
-    let mut data = Vec::new();
-    image_reader.read_to_end(&mut data).unwrap();
-
-    concatenate_and_print_image(data).expect("display image failed");
+    let config: Config = Config::from_args();
+    concatenate_and_print_image(config).expect("display image failed");
 }
 
-fn concatenate_and_print_image(data: Vec<u8>) -> io::Result<()> {
+#[derive(Debug, StructOpt)]
+#[structopt(name = "imgcat")]
+struct Config {
+    #[structopt(parse(from_os_str))]
+    path: PathBuf,
+
+    #[structopt(long, default_value = "auto")]
+    width: String,
+
+    #[structopt(long, default_value = "auto")]
+    height: String,
+
+    #[structopt(long)]
+    preserve_aspect_ratio: bool,
+
+    #[structopt(long)]
+    inline: bool,
+}
+
+fn concatenate_and_print_image(config: Config) -> io::Result<()> {
+    let Config {
+        path,
+        width,
+        height,
+        preserve_aspect_ratio,
+        inline,
+    } = config;
+
+    let data = read_file(path)?;
+
     let mut image_writer = BufWriter::new(stdout());
     let is_tmux = env!("TERM").starts_with("screen");
     let mut buffer = Vec::<u8>::new();
@@ -40,10 +57,10 @@ fn concatenate_and_print_image(data: Vec<u8>) -> io::Result<()> {
     buffer.extend_from_slice(b"1337;File=");
 
     buffer.extend_from_slice(format!(";size={}", data.len()).as_bytes());
-    buffer.extend_from_slice(b";inline=1");
-    buffer.extend_from_slice(b";width=auto");
-    buffer.extend_from_slice(b";height=auto");
-    buffer.extend_from_slice(b";preserveAspectRatio=0");
+    buffer.extend_from_slice(format!(";inline={}", u8::from(!inline)).as_bytes());
+    buffer.extend_from_slice(format!(";width={}", width).as_bytes());
+    buffer.extend_from_slice(format!(";height={}", height).as_bytes());
+    buffer.extend_from_slice(format!(";preserveAspectRatio={}", u8::from(preserve_aspect_ratio)).as_bytes());
     buffer.push(b':');
 
     buffer.extend_from_slice(base64::encode(&data).as_bytes());
@@ -57,4 +74,14 @@ fn concatenate_and_print_image(data: Vec<u8>) -> io::Result<()> {
 
     image_writer.write_all(&buffer)?;
     image_writer.flush()
+}
+
+fn read_file(path: PathBuf) -> io::Result<Vec<u8>> {
+    let file = File::open(path)?;
+
+    let mut reader = BufReader::new(file);
+    let mut buffer = Vec::new();
+    reader.read_to_end(&mut buffer)?;
+
+    Ok(buffer)
 }
