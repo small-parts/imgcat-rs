@@ -1,90 +1,75 @@
 use std::env;
-use std::fs::File;
+use std::fs;
 use std::io;
-use std::io::prelude::*;
-use std::io::BufWriter;
-use std::io::{stdout, BufReader};
+use std::io::Write;
+use std::io::stdout;
 use std::os::unix::ffi::OsStrExt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use structopt::StructOpt;
+use base64::Engine;
+use base64::prelude::BASE64_STANDARD;
+use clap::Parser;
 
-fn main() {
-    let config: Config = Config::from_args();
-    concatenate_and_print_image(config).expect("failed display image");
-}
+fn main() -> io::Result<()> {
+    let args = Args::parse();
 
-#[derive(Debug, StructOpt)]
-#[structopt(name = "imgcat")]
-struct Config {
-    #[structopt(parse(from_os_str))]
-    path: PathBuf,
+    let content = fs::read(&args.file_path)?;
 
-    #[structopt(long, default_value = "auto")]
-    width: String,
-
-    #[structopt(long, default_value = "auto")]
-    height: String,
-
-    #[structopt(long)]
-    preserve_aspect_ratio: bool,
-
-    #[structopt(long)]
-    inline: bool,
-}
-
-fn concatenate_and_print_image(config: Config) -> io::Result<()> {
-    let Config {
-        path,
-        width,
-        height,
-        preserve_aspect_ratio,
-        inline,
-    } = config;
-
-    let data = read_file(&path)?;
-
-    let is_tmux = env!("TERM").starts_with("screen");
-    let mut buffer = Vec::<u8>::new();
+    let is_tmux = env::var("TERM").is_ok_and(|term| term.starts_with("screen"));
+    let mut buffer = Vec::new();
 
     // OSC
-    buffer.push(27);
+    buffer.push(b'\x1b');
     if is_tmux {
-        buffer.extend(&[80, 116, 109, 117, 120, 59, 27, 27]);
+        buffer.extend_from_slice(b"Ptmux;\x1b\x1b");
     }
     buffer.push(b']');
 
     buffer.extend_from_slice(b"1337;File=");
-    if let Some(filename) = path.file_name() {
+    if let Some(filename) = args.file_path.file_name() {
         buffer.extend_from_slice(filename.as_bytes());
     }
-    buffer.extend_from_slice(format!(";size={}", data.len()).as_bytes());
-    buffer.extend_from_slice(format!(";inline={}", !inline as u8).as_bytes());
-    buffer.extend_from_slice(format!(";width={}", width).as_bytes());
-    buffer.extend_from_slice(format!(";height={}", height).as_bytes());
-    buffer.extend_from_slice(format!(";preserveAspectRatio={}", preserve_aspect_ratio as u8).as_bytes());
+    write!(buffer, ";size={}", content.len())?;
+    buffer.extend_from_slice(b";inline=1");
+    write!(buffer, ";width={}", args.width)?;
+    write!(buffer, ";height={}", args.height)?;
+    write!(buffer, ";preserveAspectRatio={}", u8::from(args.preserve_aspect_ratio))?;
     buffer.push(b':');
 
-    buffer.extend_from_slice(base64::encode(&data).as_bytes());
+    buffer.extend_from_slice(BASE64_STANDARD.encode(&content).as_bytes());
 
     // ST
-    buffer.push(7);
+    buffer.push(b'\x07');
     if is_tmux {
-        buffer.extend(&[27, 92]);
+        buffer.extend_from_slice(b"\x1b\\");
     }
     buffer.push(b'\n');
 
-    let mut image_writer = BufWriter::new(stdout());
-    image_writer.write_all(&buffer)?;
-    image_writer.flush()
+    let mut stdout = stdout().lock();
+    stdout.write_all(&buffer)?;
+    stdout.flush()
 }
 
-fn read_file<P: AsRef<Path>>(path: P) -> io::Result<Vec<u8>> {
-    let file = File::open(path)?;
+#[derive(Parser)]
+#[command(
+    name = "imgcat",
+    version,
+    about = "Display images inline in iTerm2",
+    long_about = "Read an image file and print the iTerm2 inline image escape sequence to stdout."
+)]
+struct Args {
+    /// Image file to display.
+    file_path: PathBuf,
 
-    let mut reader = BufReader::new(file);
-    let mut buffer = Vec::new();
-    reader.read_to_end(&mut buffer)?;
+    /// Display width.
+    #[arg(long, default_value = "auto")]
+    width: String,
 
-    Ok(buffer)
+    /// Display height.
+    #[arg(long, default_value = "auto")]
+    height: String,
+
+    /// Preserve the image aspect ratio.
+    #[arg(long)]
+    preserve_aspect_ratio: bool,
 }

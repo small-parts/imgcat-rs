@@ -1,14 +1,14 @@
 [package]
 name = "imgcat"
-version = "0.1.0"
+version = "0.1.1"
 description = "concatenate and print images in iterm2"
 keywords = ["image", "terminal"]
 readme = "README.md"
 authors = ["ltoddy <tao.liu1@thoughtworks.com>"]
-edition = "2018"
+edition = "2024"
 license = "MIT"
-homepage = "https://github.com/ltoddy/imgcat-rs"
-repository = "https://github.com/ltoddy/phony"
+homepage = "https://github.com/small-parts/imgcat-rs"
+repository = "https://github.com/small-parts/imgcat-rs"
 categories = ["development-tools"]
 include = [
     "src/**/*.rs",
@@ -22,5 +22,5 @@ include = [
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-base64 = "0.11.0"
-structopt = "0.3.5"
+base64 = "0.22"
+clap = { version = "4.6", features = ["derive"] }

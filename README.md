@@ -1,23 +1,19 @@
 Usage:
 
 ```
-imgcat 0.1.0
+Display images inline in iTerm2
 
-USAGE:
-    imgcat [FLAGS] [OPTIONS] <path>
+Usage: imgcat [OPTIONS] <PATH>
 
-FLAGS:
-    -h, --help                     Prints help information
-        --inline
-        --preserve-aspect-ratio
-    -V, --version                  Prints version information
+Arguments:
+  <PATH>  Image file to display
 
-OPTIONS:
-        --height <height>     [default: auto]
-        --width <width>       [default: auto]
-
-ARGS:
-    <path>
+Options:
+      --width <WIDTH>            Display width [default: auto]
+      --height <HEIGHT>          Display height [default: auto]
+      --preserve-aspect-ratio    Preserve the image aspect ratio
+  -h, --help                     Print help
+  -V, --version                  Print version
 ```
 
 > cargo run -- me.jpg
