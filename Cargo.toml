@@ -1,6 +1,6 @@
 [package]
 name = "imgcat"
-version = "0.1.1"
+version = "0.1.2"
 description = "concatenate and print images in iterm2"
 keywords = ["image", "terminal"]
 readme = "README.md"
@@ -24,3 +24,11 @@ include = [
 [dependencies]
 base64 = "0.22"
 clap = { version = "4.6", features = ["derive"] }
+
+[profile.dev]
+debug = 0
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
